@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using System.Globalization;
+using DocumentFormat.OpenXml.Experimental;
 using IronSoftware.Drawing;
 using SkiaSharp;
 
@@ -117,13 +118,13 @@ namespace OpenXmlPowerTools
             var skFontStyle = MapFontStyle(fontStyle);
 
             using (var paint = new SKPaint())
+            using (var font = new SKFont())
             {
-                paint.Typeface = SKTypeface.FromFamilyName(fontFamily, skFontStyle);
-                paint.TextSize = (float)size;
+                font.Typeface = SKTypeface.FromFamilyName(fontFamily, skFontStyle);
+                font.Size = (float)size;
 
                 // Measure the text's width and height
-                var bounds = new SKRect();
-                paint.MeasureText(text, ref bounds);
+                font.MeasureText(text, out SKRect bounds, paint);
 
                 return (int)bounds.Width;
             }
@@ -193,7 +194,7 @@ namespace OpenXmlPowerTools
 
         private static XElement RetrieveContentTypeList(OpenXmlPackage oxPkg)
         {
-            Package pkg = oxPkg.Package;
+            IPackage pkg = oxPkg.GetPackage();
 
             var nonRelationshipParts = pkg.GetParts().Cast<ZipPackagePart>().Where(p => p.ContentType != "application/vnd.openxmlformats-package.relationships+xml");
             var contentTypes = nonRelationshipParts
@@ -207,7 +208,7 @@ namespace OpenXmlPowerTools
 
         private static XElement RetrieveNamespaceList(OpenXmlPackage oxPkg)
         {
-            Package pkg = oxPkg.Package;
+            IPackage pkg = oxPkg.GetPackage();
 
             var nonRelationshipParts = pkg.GetParts().Cast<ZipPackagePart>().Where(p => p.ContentType != "application/vnd.openxmlformats-package.relationships+xml");
             var xmlParts = nonRelationshipParts
@@ -455,7 +456,7 @@ namespace OpenXmlPowerTools
 
         private static void ValidateImageExists(OpenXmlPart part, string relId, Dictionary<XName, int> metrics)
         {
-            var imagePart = part.Parts.FirstOrDefault(ipp => ipp.RelationshipId == relId);
+            IdPartPair? imagePart = part.Parts.Where(ipp => ipp.RelationshipId == relId).DefaultIfEmpty().First();
             if (imagePart == null)
                 IncrementMetric(metrics, H.ReferenceToNullImage);
         }

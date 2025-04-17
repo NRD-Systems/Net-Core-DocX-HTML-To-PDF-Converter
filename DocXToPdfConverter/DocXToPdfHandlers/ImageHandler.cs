@@ -16,39 +16,6 @@ namespace DocXToPdfConverter.DocXToPdfHandlers
             return image;
         }
 
-        public static ImagePartType GetImagePartType(this MemoryStream stream)
-        {
-            stream.Position = 0;
-            using (var image = AnyBitmap.FromStream(stream))
-            {
-                stream.Position = 0;
-
-
-                if (ImageFormat.Jpeg.Equals(image.GetImageFormat()))
-                {
-                    return ImagePartType.Jpeg;
-                }
-                else if (ImageFormat.Png.Equals(image.GetImageFormat()))
-                {
-                    return ImagePartType.Png;
-                }
-                else if (ImageFormat.Gif.Equals(image.GetImageFormat()))
-                {
-                    return ImagePartType.Gif;
-                }
-                else if (ImageFormat.Bmp.Equals(image.GetImageFormat()))
-                {
-                    return ImagePartType.Bmp;
-                }
-                else if (ImageFormat.Tiff.Equals(image.GetImageFormat()))
-                {
-                    return ImagePartType.Tiff;
-                }
-
-                return ImagePartType.Jpeg;
-            }
-        }
-
         public static string GetImageType(this MemoryStream stream)
         {
             stream.Position = 0;

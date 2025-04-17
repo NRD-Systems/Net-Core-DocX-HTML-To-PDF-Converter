@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using System.Text;
+using DocumentFormat.OpenXml.Experimental;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXmlPowerTools
@@ -76,7 +77,6 @@ namespace OpenXmlPowerTools
                 using (PresentationDocument output = streamDoc.GetPresentationDocument())
                 {
                     BuildPresentation(sources, output);
-                    output.Close();
                 }
                 streamDoc.GetModifiedDocument().SaveAs(fileName);
             }
@@ -89,7 +89,6 @@ namespace OpenXmlPowerTools
                 using (PresentationDocument output = streamDoc.GetPresentationDocument())
                 {
                     BuildPresentation(sources, output);
-                    output.Close();
                 }
                 return streamDoc.GetModifiedPmlDocument();
             }
@@ -159,8 +158,7 @@ namespace OpenXmlPowerTools
                     {
                         if (dbie.Message.Contains("{0}"))
                             throw new PresentationBuilderException(string.Format(dbie.Message, sourceNum));
-                        else
-                            throw dbie;
+                        throw;
                     }
                 }
                 sourceNum++;
@@ -374,7 +372,7 @@ namespace OpenXmlPowerTools
         {
             XElement newRegular;
             FontPart oldFontPart = (FontPart)sourceDocument.PresentationPart.GetPartById((string)font.Element(fontXName).Attributes(R.id).FirstOrDefault());
-            FontPartType fpt;
+            PartTypeInfo fpt;
             if (oldFontPart.ContentType == "application/x-fontdata")
                 fpt = FontPartType.FontData;
             else if (oldFontPart.ContentType == "application/x-font-ttf")
@@ -686,7 +684,7 @@ namespace OpenXmlPowerTools
             {
                 // dm attribute
                 string relId = diagramReference.Attribute(R.dm).Value;
-                var tempPartIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair != null)
                     continue;
 
@@ -703,7 +701,7 @@ namespace OpenXmlPowerTools
 
                 // lo attribute
                 relId = diagramReference.Attribute(R.lo).Value;
-                var tempPartIdPair2 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair2 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair2 != null)
                     continue;
 
@@ -720,7 +718,7 @@ namespace OpenXmlPowerTools
 
                 // qs attribute
                 relId = diagramReference.Attribute(R.qs).Value;
-                var tempPartIdPair3 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair3 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair3 != null)
                     continue;
 
@@ -737,7 +735,7 @@ namespace OpenXmlPowerTools
 
                 // cs attribute
                 relId = diagramReference.Attribute(R.cs).Value;
-                var tempPartIdPair4 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair4 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair4 != null)
                     continue;
 
@@ -761,7 +759,7 @@ namespace OpenXmlPowerTools
                 // This is necessary for those parts that get processed with both old and new ids, such as the comments
                 // part.  This is not necessary for parts such as the main document part, but this code won't malfunction
                 // in that case.
-                var tempPartIdPair5 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair5 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair5 != null)
                     continue;
 
@@ -769,10 +767,10 @@ namespace OpenXmlPowerTools
                 if (tempEr5 != null)
                     continue;
 
-                var oldPartIdPair = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair != null)
                 {
-                    OpenXmlPart oldPart = oldPartIdPair.OpenXmlPart;
+                    OpenXmlPart oldPart = oldPartIdPair.Value.OpenXmlPart;
                     OpenXmlPart newPart = null;
                     if (oldPart is EmbeddedObjectPart)
                     {
@@ -832,7 +830,7 @@ namespace OpenXmlPowerTools
                 if (string.IsNullOrEmpty(relId))
                     continue;
 
-                var tempPartIdPair6 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair6 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair6 != null)
                     continue;
 
@@ -840,10 +838,10 @@ namespace OpenXmlPowerTools
                 if (tempEr6 != null)
                     continue;
 
-                var oldPartIdPair2 = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair2 = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair2 != null)
                 {
-                    ChartPart oldPart = oldPartIdPair2.OpenXmlPart as ChartPart;
+                    ChartPart oldPart = oldPartIdPair2.Value.OpenXmlPart as ChartPart;
                     if (oldPart != null)
                     {
                         XDocument oldChart = oldPart.GetXDocument();
@@ -863,7 +861,7 @@ namespace OpenXmlPowerTools
                 if (string.IsNullOrEmpty(relId))
                     continue;
 
-                var tempPartIdPair7 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair7 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair7 != null)
                     continue;
 
@@ -871,10 +869,10 @@ namespace OpenXmlPowerTools
                 if (tempEr7 != null)
                     continue;
 
-                var oldPartIdPair3 = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair3 = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair3 != null)
                 {
-                    ChartDrawingPart oldPart = oldPartIdPair3.OpenXmlPart as ChartDrawingPart;
+                    ChartDrawingPart oldPart = oldPartIdPair3.Value.OpenXmlPart as ChartDrawingPart;
                     if (oldPart != null)
                     {
                         XDocument oldXDoc = oldPart.GetXDocument();
@@ -894,7 +892,7 @@ namespace OpenXmlPowerTools
                 if (string.IsNullOrEmpty(relId))
                     continue;
 
-                var tempPartIdPair8 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair8 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair8 != null)
                     continue;
 
@@ -902,10 +900,10 @@ namespace OpenXmlPowerTools
                 if (tempEr8 != null)
                     continue;
 
-                var oldPartIdPair4 = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair4 = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair4 != null)
                 {
-                    UserDefinedTagsPart oldPart = oldPartIdPair4.OpenXmlPart as UserDefinedTagsPart;
+                    UserDefinedTagsPart oldPart = oldPartIdPair4.Value.OpenXmlPart as UserDefinedTagsPart;
                     if (oldPart != null)
                     {
                         XDocument oldXDoc = oldPart.GetXDocument();
@@ -923,16 +921,16 @@ namespace OpenXmlPowerTools
                 if (string.IsNullOrEmpty(relId))
                     continue;
 
-                var tempPartIdPair9 = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair9 = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair9 != null)
                     continue;
 
-                var oldPartIdPair9 = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair9 = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair9 != null)
                 {
                     CustomXmlPart newPart = newDocument.PresentationPart.AddCustomXmlPart(CustomXmlPartType.CustomXml);
-                    newPart.FeedData(oldPartIdPair9.OpenXmlPart.GetStream());
-                    foreach (var itemProps in oldPartIdPair9.OpenXmlPart.Parts.Where(p => p.OpenXmlPart.ContentType == "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"))
+                    newPart.FeedData(oldPartIdPair9.Value.OpenXmlPart.GetStream());
+                    foreach (var itemProps in oldPartIdPair9.Value.OpenXmlPart.Parts.Where(p => p.OpenXmlPart.ContentType == "application/vnd.openxmlformats-officedocument.customXmlProperties+xml"))
                     {
                         var newId2 = "R" + Guid.NewGuid().ToString().Replace("-", "").Substring(0, 16);
                         CustomXmlPropertiesPart cxpp = newPart.AddNewPart<CustomXmlPropertiesPart>("application/vnd.openxmlformats-officedocument.customXmlProperties+xml", newId2);
@@ -1039,10 +1037,10 @@ namespace OpenXmlPowerTools
             {
                 string relId = dataReference.Attribute(R.id).Value;
 
-                var oldPartIdPair = oldChart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? oldPartIdPair = oldChart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (oldPartIdPair != null)
                 {
-                    EmbeddedPackagePart oldPart = oldPartIdPair.OpenXmlPart as EmbeddedPackagePart;
+                    EmbeddedPackagePart oldPart = oldPartIdPair.Value.OpenXmlPart as EmbeddedPackagePart;
                     if (oldPart != null)
                     {
                         EmbeddedPackagePart newPart = newChart.AddEmbeddedPackagePart(oldPart.ContentType);
@@ -1057,7 +1055,7 @@ namespace OpenXmlPowerTools
                         dataReference.Attribute(R.id).Value = newChart.GetIdOfPart(newPart);
                         continue;
                     }
-                    EmbeddedObjectPart oldEmbeddedObjectPart = oldPartIdPair.OpenXmlPart as EmbeddedObjectPart;
+                    EmbeddedObjectPart oldEmbeddedObjectPart = oldPartIdPair.Value.OpenXmlPart as EmbeddedObjectPart;
                     if (oldEmbeddedObjectPart != null)
                     {
                         EmbeddedPackagePart newPart = newChart.AddEmbeddedPackagePart(oldEmbeddedObjectPart.ContentType);
@@ -1076,13 +1074,13 @@ namespace OpenXmlPowerTools
                         // following is a hack to fix the package because the Open XML SDK does not let us create
                         // a relationship from a chart with the oleObject relationship type.
 
-                        var pkg = newChart.OpenXmlPackage.Package;
+                        var pkg = newChart.OpenXmlPackage.GetPackage();
                         var fromPart = pkg.GetParts().FirstOrDefault(p => p.Uri == newChart.Uri);
-                        var rel = fromPart.GetRelationships().FirstOrDefault(p => p.Id == rId);
+                        var rel = fromPart.Relationships.FirstOrDefault(p => p.Id == rId);
                         var targetUri = rel.TargetUri;
 
-                        fromPart.DeleteRelationship(rId);
-                        fromPart.CreateRelationship(targetUri, System.IO.Packaging.TargetMode.Internal,
+                        fromPart.Relationships.Remove(rId);
+                        fromPart.Relationships.Create(targetUri, System.IO.Packaging.TargetMode.Internal,
                             "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject", rId);
 
                         continue;
@@ -1210,7 +1208,7 @@ namespace OpenXmlPowerTools
             // This is necessary for those parts that get processed with both old and new ids, such as the comments
             // part.  This is not necessary for parts such as the main document part, but this code won't malfunction
             // in that case.
-            var partIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+            IdPartPair? partIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
             if (partIdPair != null)
                 return;
 
@@ -1218,10 +1216,10 @@ namespace OpenXmlPowerTools
             if (extRel != null)
                 return;
 
-            var oldPartIdPair = oldContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+            IdPartPair? oldPartIdPair = oldContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
             if (oldPartIdPair != null)
             {
-                ImagePart oldPart = oldPartIdPair.OpenXmlPart as ImagePart;
+                ImagePart oldPart = oldPartIdPair.Value.OpenXmlPart as ImagePart;
                 ImageData temp = ManageImageCopy(oldPart, newContentPart, images);
                 if (temp.ImagePart == null)
                 {
@@ -1321,8 +1319,8 @@ namespace OpenXmlPowerTools
                 }
                 else
                 {
-                    var fromPart = newContentPart.OpenXmlPackage.Package.GetParts().FirstOrDefault(p => p.Uri == newContentPart.Uri);
-                    fromPart.CreateRelationship(new Uri("NULL", UriKind.RelativeOrAbsolute), System.IO.Packaging.TargetMode.Internal, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", relId);
+                    var fromPart = newContentPart.OpenXmlPackage.GetPackage().GetParts().FirstOrDefault(p => p.Uri == newContentPart.Uri);
+                    fromPart.Relationships.Create(new Uri("NULL", UriKind.RelativeOrAbsolute), System.IO.Packaging.TargetMode.Internal, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", relId);
                 }
             }
         }
@@ -1477,7 +1475,7 @@ namespace OpenXmlPowerTools
             if (string.IsNullOrEmpty(relId))
                 return;
 
-            var tempPartIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+            IdPartPair? tempPartIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
             if (tempPartIdPair != null)
                 return;
 
@@ -1500,7 +1498,7 @@ namespace OpenXmlPowerTools
             if (string.IsNullOrEmpty(relId))
                 return;
 
-            var tempPartIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+            IdPartPair? tempPartIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
             if (tempPartIdPair != null)
                 return;
 
@@ -1535,7 +1533,7 @@ namespace OpenXmlPowerTools
             if (string.IsNullOrEmpty(relId))
                 return;
 
-            var tempPartIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+            IdPartPair? tempPartIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
             if (tempPartIdPair != null)
                 return;
 
@@ -1559,7 +1557,7 @@ namespace OpenXmlPowerTools
                 // This is necessary for those parts that get processed with both old and new ids, such as the comments
                 // part.  This is not necessary for parts such as the main document part, but this code won't malfunction
                 // in that case.
-                var tempPartIdPair = newContentPart.Parts.FirstOrDefault(p => p.RelationshipId == relId);
+                IdPartPair? tempPartIdPair = newContentPart.Parts.Where(p => p.RelationshipId == relId).DefaultIfEmpty().First();
                 if (tempPartIdPair != null)
                     return;
 
@@ -1727,8 +1725,8 @@ namespace OpenXmlPowerTools
                 }
                 catch (KeyNotFoundException)
                 {
-                    var fromPart = newContentPart.OpenXmlPackage.Package.GetParts().FirstOrDefault(p => p.Uri == newContentPart.Uri);
-                    fromPart.CreateRelationship(new Uri("NULL", UriKind.RelativeOrAbsolute), System.IO.Packaging.TargetMode.Internal, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", relId);
+                    var fromPart = newContentPart.OpenXmlPackage.GetPackage().GetParts().FirstOrDefault(p => p.Uri == newContentPart.Uri);
+                    fromPart.Relationships.Create(new Uri("NULL", UriKind.RelativeOrAbsolute), System.IO.Packaging.TargetMode.Internal, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", relId);
                 }
             }
         }

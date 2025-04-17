@@ -37,7 +37,7 @@ namespace ExampleApplication
             //or anything you have in Linux...
 
             string locationOfLibreOfficeSoffice =
-                @"C:\utils\LibreOfficePortable\App\libreoffice\program\soffice.exe";
+                @"C:\Program Files\LibreOffice\program\soffice.exe";
 
 
             //This is only to get this example to work (find the word docx and the html file, which were

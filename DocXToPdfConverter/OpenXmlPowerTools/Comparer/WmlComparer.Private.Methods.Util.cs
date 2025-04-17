@@ -7,14 +7,15 @@ using System.IO;
 using System.IO.Packaging;
 using System.Linq;
 using System.Xml.Linq;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXmlPowerTools
 {
     public static partial class WmlComparer
     {
         private static XElement MoveRelatedPartsToDestination(
-            PackagePart partOfDeletedContent,
-            PackagePart partInNewDocument,
+            IPackagePart partOfDeletedContent,
+            IPackagePart partInNewDocument,
             XElement contentElement)
         {
             List<XElement> elementsToUpdate = contentElement
@@ -33,14 +34,14 @@ namespace OpenXmlPowerTools
                 {
                     var rId = (string) att;
 
-                    PackageRelationship relationshipForDeletedPart = partOfDeletedContent.GetRelationship(rId);
+                    IPackageRelationship relationshipForDeletedPart = partOfDeletedContent.Relationships.Single(p => p.Id == rId);
 
                     Uri targetUri = PackUriHelper
                         .ResolvePartUri(
                             new Uri(partOfDeletedContent.Uri.ToString(), UriKind.Relative),
                             relationshipForDeletedPart.TargetUri);
 
-                    PackagePart relatedPackagePart = partOfDeletedContent.Package.GetPart(targetUri);
+                    IPackagePart relatedPackagePart = partOfDeletedContent.Package.GetPart(targetUri);
                     string[] uriSplit = relatedPackagePart.Uri.ToString().Split('/');
                     string[] last = uriSplit[uriSplit.Length - 1].Split('.');
                     string uriString;
@@ -59,30 +60,30 @@ namespace OpenXmlPowerTools
                         ? new Uri(uriString, UriKind.Absolute)
                         : new Uri(uriString, UriKind.Relative);
 
-                    PackagePart newPart = partInNewDocument.Package.CreatePart(uri, relatedPackagePart.ContentType);
+                    IPackagePart newPart = partInNewDocument.Package.CreatePart(uri, relatedPackagePart.ContentType, CompressionOption.Normal);
 
                     // ReSharper disable once PossibleNullReferenceException
-                    using (Stream oldPartStream = relatedPackagePart.GetStream())
-                    using (Stream newPartStream = newPart.GetStream())
+                    using (Stream oldPartStream = relatedPackagePart.GetStream(FileMode.Open, FileAccess.ReadWrite))
+                    using (Stream newPartStream = newPart.GetStream(FileMode.Open, FileAccess.ReadWrite))
                     {
                         FileUtils.CopyStream(oldPartStream, newPartStream);
                     }
 
                     string newRid = "R" + Guid.NewGuid().ToString().Replace("-", "");
-                    partInNewDocument.CreateRelationship(newPart.Uri, TargetMode.Internal,
+                    partInNewDocument.Relationships.Create(newPart.Uri, TargetMode.Internal,
                         relationshipForDeletedPart.RelationshipType, newRid);
                     att.Value = newRid;
 
                     if (newPart.ContentType.EndsWith("xml"))
                     {
                         XDocument newPartXDoc;
-                        using (Stream stream = newPart.GetStream())
+                        using (Stream stream = newPart.GetStream(FileMode.Open, FileAccess.ReadWrite))
                         {
                             newPartXDoc = XDocument.Load(stream);
                             MoveRelatedPartsToDestination(relatedPackagePart, newPart, newPartXDoc.Root);
                         }
 
-                        using (Stream stream = newPart.GetStream())
+                        using (Stream stream = newPart.GetStream(FileMode.Open, FileAccess.ReadWrite))
                             newPartXDoc.Save(stream);
                     }
                 }

@@ -4,8 +4,10 @@ using System.IO;
 using System.IO.Packaging;
 using System.Linq;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Experimental;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using IronSoftware.Drawing;
 using OpenXmlPowerTools;
 using A = DocumentFormat.OpenXml.Drawing;
 using Break = DocumentFormat.OpenXml.Wordprocessing.Break;
@@ -379,28 +381,79 @@ namespace DocXToPdfConverter.DocXToPdfHandlers
 
             MainDocumentPart mainPart = wordprocessingDocument.MainDocumentPart;
 
-            var imageUri = new Uri($"/word/media/{placeholder.Key}{_imageCounter}.{imageExtension}", UriKind.Relative);
-
             // Create "image" part in /word/media
             // Change content type for other image types.
-            PackagePart packageImagePart = wordprocessingDocument.Package.CreatePart(imageUri, "Image/" + imageExtension);
+
+            // ------------------------------------------------------------
+            // https://github.com/dotnet/Open-XML-SDK/issues/1730
+            // This but uploads the image into \media and which Word moves to \word\media if amended so logged with Microsoft
+            // ImagePart packageImagePart = mainPart.AddImagePart(GetImagePartType(imageExtension));
 
             // Feed data.
-            placeholder.Value.MemStream.Position = 0;
-            byte[] imageBytes = placeholder.Value.MemStream.ToArray();
-            packageImagePart.GetStream().Write(imageBytes, 0, imageBytes.Length);
+            // placeholder.Value.MemStream.Position = 0;
+            // packageImagePart.FeedData(placeholder.Value.MemStream);
+            // string relationshipId = mainPart.GetIdOfPart(packageImagePart);
+            // -------------------------------------------------------------
+            // New code to replace the above - If Microsoft resolve the AddImagePart function can be swapped back
+            Uri imageUri = new ($"/word/media/{placeholder.Key}{_imageCounter}.{imageExtension}", UriKind.Relative);
+            Uri internalImageUri = new ($"media/{placeholder.Key}{_imageCounter}.{imageExtension}", UriKind.Relative);
 
-            PackagePart documentPackagePart = mainPart.OpenXmlPackage.Package.GetPart(new Uri("/word/document.xml", UriKind.Relative));
+            IPackage documentPackage = mainPart.OpenXmlPackage.GetPackage();
+            IPackagePart packageImagePart = documentPackage.CreatePart(imageUri, GetImagePartType(imageExtension).ContentType, CompressionOption.Normal);
+            placeholder.Value.MemStream.CopyTo(packageImagePart.GetStream(FileMode.Open, FileAccess.Write));
+            IPackagePart mainPartPackage = documentPackage.GetPart(mainPart.Uri);
 
-            // URI to the image is relative to relationship document.
-            PackageRelationship imageRelationshipPart = documentPackagePart.CreateRelationship(
-                new Uri("media/" + placeholder.Key + _imageCounter + "." + imageExtension, UriKind.Relative),
+            IPackageRelationship imageRelationship = mainPartPackage.Relationships.Create(
+                internalImageUri,
                 TargetMode.Internal, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
+            string relationshipId = imageRelationship.Id;
+            // ---------------------------------------------------------------
 
             var imgTmp = placeholder.Value.MemStream.GetImage();
 
-            var drawing = GetImageElement(imageRelationshipPart.Id, placeholder.Key, "picture", imgTmp.Width, imgTmp.Height, placeholder.Value.Dpi);
+            var drawing = GetImageElement(relationshipId, placeholder.Key, "picture", imgTmp.Width, imgTmp.Height, placeholder.Value.Dpi);
             element.AppendChild(drawing);
+        }
+
+        public static PartTypeInfo GetImagePartType(MemoryStream stream)
+        {
+            stream.Position = 0;
+            using (var image = AnyBitmap.FromStream(stream))
+            {
+                stream.Position = 0;
+
+                if (AnyBitmap.ImageFormat.Png.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Png;
+                }
+                if (AnyBitmap.ImageFormat.Gif.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Gif;
+                }
+                if (AnyBitmap.ImageFormat.Bmp.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Bmp;
+                }
+                if (AnyBitmap.ImageFormat.Tiff.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Tiff;
+                }
+
+                return ImagePartType.Jpeg;
+            }
+        }
+
+        private PartTypeInfo GetImagePartType(string extension)
+        {
+            return extension.ToLowerInvariant() switch
+            {
+                "jpeg" or "jpg" => ImagePartType.Jpeg,
+                "png" => ImagePartType.Png,
+                "gif" => ImagePartType.Gif,
+                "bmp" => ImagePartType.Bmp,
+                "tiff" or "tif" => ImagePartType.Tiff,
+                _ => ImagePartType.Jpeg // Default
+            };
         }
 
 
