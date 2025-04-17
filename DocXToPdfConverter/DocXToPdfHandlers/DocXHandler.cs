@@ -7,6 +7,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Experimental;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using IronSoftware.Drawing;
 using OpenXmlPowerTools;
 using A = DocumentFormat.OpenXml.Drawing;
 using Break = DocumentFormat.OpenXml.Wordprocessing.Break;
@@ -398,7 +399,7 @@ namespace DocXToPdfConverter.DocXToPdfHandlers
             Uri internalImageUri = new ($"media/{placeholder.Key}{_imageCounter}.{imageExtension}", UriKind.Relative);
 
             IPackage documentPackage = mainPart.OpenXmlPackage.GetPackage();
-            IPackagePart packageImagePart = documentPackage.CreatePart(imageUri, "image/jpeg", CompressionOption.Normal);
+            IPackagePart packageImagePart = documentPackage.CreatePart(imageUri, GetImagePartType(imageExtension).ContentType, CompressionOption.Normal);
             placeholder.Value.MemStream.CopyTo(packageImagePart.GetStream(FileMode.Open, FileAccess.Write));
             IPackagePart mainPartPackage = documentPackage.GetPart(mainPart.Uri);
 
@@ -412,6 +413,34 @@ namespace DocXToPdfConverter.DocXToPdfHandlers
 
             var drawing = GetImageElement(relationshipId, placeholder.Key, "picture", imgTmp.Width, imgTmp.Height, placeholder.Value.Dpi);
             element.AppendChild(drawing);
+        }
+
+        public static PartTypeInfo GetImagePartType(MemoryStream stream)
+        {
+            stream.Position = 0;
+            using (var image = AnyBitmap.FromStream(stream))
+            {
+                stream.Position = 0;
+
+                if (AnyBitmap.ImageFormat.Png.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Png;
+                }
+                if (AnyBitmap.ImageFormat.Gif.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Gif;
+                }
+                if (AnyBitmap.ImageFormat.Bmp.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Bmp;
+                }
+                if (AnyBitmap.ImageFormat.Tiff.Equals(image.GetImageFormat()))
+                {
+                    return ImagePartType.Tiff;
+                }
+
+                return ImagePartType.Jpeg;
+            }
         }
 
         private PartTypeInfo GetImagePartType(string extension)
