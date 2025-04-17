@@ -3058,11 +3058,10 @@ namespace OpenXmlPowerTools
             var imageRid = (string)blipFill.Elements(A.blip).Attributes(R.embed).FirstOrDefault();
             if (imageRid == null) return null;
 
-            var pp3 = wordDoc.MainDocumentPart.Parts.FirstOrDefault(pp => pp.RelationshipId == imageRid);
+            IdPartPair? pp3 = wordDoc.MainDocumentPart.Parts.Where(pp => pp.RelationshipId == imageRid).DefaultIfEmpty().First();
             if (pp3 == null) return null;
 
-            var imagePart = (ImagePart)pp3.OpenXmlPart;
-            if (imagePart == null) return null;
+            var imagePart = (ImagePart)pp3.Value.OpenXmlPart;
 
             // If the image markup points to a NULL image, then following will throw an ArgumentOutOfRangeException
             try
@@ -3131,11 +3130,10 @@ namespace OpenXmlPowerTools
 
             try
             {
-                var pp = wordDoc.MainDocumentPart.Parts.FirstOrDefault(pp2 => pp2.RelationshipId == imageRid);
+                IdPartPair? pp = wordDoc.MainDocumentPart.Parts.Where(pp2 => pp2.RelationshipId == imageRid).DefaultIfEmpty().First();
                 if (pp == null) return null;
 
-                var imagePart = (ImagePart)pp.OpenXmlPart;
-                if (imagePart == null) return null;
+                var imagePart = (ImagePart)pp.Value.OpenXmlPart;
 
                 var contentType = imagePart.ContentType;
                 if (!ImageContentTypes.Contains(contentType))

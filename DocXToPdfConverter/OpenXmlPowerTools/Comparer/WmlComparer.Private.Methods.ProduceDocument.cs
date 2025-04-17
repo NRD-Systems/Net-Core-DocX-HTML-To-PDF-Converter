@@ -8,6 +8,7 @@ using System.IO.Packaging;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using DocumentFormat.OpenXml.Experimental;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXmlPowerTools
@@ -2747,10 +2748,10 @@ namespace OpenXmlPowerTools
                                         OpenXmlPart openXmlPartInNewDocument = part;
                                         return gc.Select(gce =>
                                         {
-                                            Package packageOfDeletedContent = openXmlPartOfDeletedContent.OpenXmlPackage.Package;
-                                            Package packageOfNewContent = openXmlPartInNewDocument.OpenXmlPackage.Package;
-                                            PackagePart partInDeletedDocument = packageOfDeletedContent.GetPart(part.Uri);
-                                            PackagePart partInNewDocument = packageOfNewContent.GetPart(part.Uri);
+                                            IPackage packageOfDeletedContent = openXmlPartOfDeletedContent.OpenXmlPackage.GetPackage();
+                                            IPackage packageOfNewContent = openXmlPartInNewDocument.OpenXmlPackage.GetPackage();
+                                            IPackagePart partInDeletedDocument = packageOfDeletedContent.GetPart(part.Uri);
+                                            IPackagePart partInNewDocument = packageOfNewContent.GetPart(part.Uri);
 
                                             return MoveRelatedPartsToDestination(
                                                 partInDeletedDocument,
@@ -2772,10 +2773,10 @@ namespace OpenXmlPowerTools
                                         OpenXmlPart openXmlPartInNewDocument = part;
                                         return gc.Select(gce =>
                                         {
-                                            Package packageOfSourceContent = openXmlPartOfInsertedContent.OpenXmlPackage.Package;
-                                            Package packageOfNewContent = openXmlPartInNewDocument.OpenXmlPackage.Package;
-                                            PackagePart partInDeletedDocument = packageOfSourceContent.GetPart(part.Uri);
-                                            PackagePart partInNewDocument = packageOfNewContent.GetPart(part.Uri);
+                                            IPackage packageOfSourceContent = openXmlPartOfInsertedContent.OpenXmlPackage.GetPackage();
+                                            IPackage packageOfNewContent = openXmlPartInNewDocument.OpenXmlPackage.GetPackage();
+                                            IPackagePart partInDeletedDocument = packageOfSourceContent.GetPart(part.Uri);
+                                            IPackagePart partInNewDocument = packageOfNewContent.GetPart(part.Uri);
 
                                             return MoveRelatedPartsToDestination(
                                                 partInDeletedDocument,
